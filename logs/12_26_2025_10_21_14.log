@@ -1,0 +1,5 @@
+[ 2025-12-26 10:21:14,148 ] root - DEBUG - This is a debug message.
+[ 2025-12-26 10:21:14,149 ] root - INFO - This is an info message.
+[ 2025-12-26 10:21:14,149 ] root - WARNING - This is a warning message.
+[ 2025-12-26 10:21:14,150 ] root - ERROR - This is an error message.
+[ 2025-12-26 10:21:14,150 ] root - CRITICAL - This is a critical message.
