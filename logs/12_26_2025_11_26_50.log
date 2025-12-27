@@ -1,7 +1,0 @@
-[ 2025-12-26 11:26:50,571 ] root - DEBUG - This is a debug message.
-[ 2025-12-26 11:26:50,571 ] root - INFO - This is an info message.
-[ 2025-12-26 11:26:50,572 ] root - WARNING - This is a warning message.
-[ 2025-12-26 11:26:50,573 ] root - ERROR - This is an error message.
-[ 2025-12-26 11:26:50,573 ] root - CRITICAL - This is a critical message.
-[ 2025-12-26 11:26:53,416 ] root - INFO - Starting training pipeline
-[ 2025-12-26 11:26:53,417 ] root - INFO - Training pipeline completed successfully

@@ -1,7 +1,0 @@
-[ 2025-12-25 22:05:12,886 ] root - DEBUG - This is a debug message.
-[ 2025-12-25 22:05:12,886 ] root - INFO - This is an info message.
-[ 2025-12-25 22:05:12,887 ] root - WARNING - This is a warning message.
-[ 2025-12-25 22:05:12,887 ] root - ERROR - This is an error message.
-[ 2025-12-25 22:05:12,888 ] root - CRITICAL - This is a critical message.
-[ 2025-12-25 22:05:12,892 ] root - INFO - unsupported operand type(s) for +: 'int' and 'str'
-[ 2025-12-25 22:05:12,894 ] root - ERROR - Error occurred in python script: [C:\Users\Komal\Desktop\mlops\demo.py] at line number [18]: unsupported operand type(s) for +: 'int' and 'str'
