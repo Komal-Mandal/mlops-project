@@ -23,33 +23,25 @@ jobs:
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
       - name: Login to Amazon ECR
-        id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v1
-
-      - name: Debug ECR info
         run: |
-          echo "ECR_REGISTRY=${{ steps.login-ecr.outputs.registry }}"
-          echo "ECR_REPO=${{ secrets.ECR_REPO }}"
+          aws ecr get-login-password --region ${{ secrets.AWS_DEFAULT_REGION }} \
+          | docker login --username AWS --password-stdin 019809346833.dkr.ecr.ap-south-1.amazonaws.com
 
-      - name: Build, tag, and push Docker image
-        env:
-          IMAGE_TAG: latest
-          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
-          ECR_REPO: ${{ secrets.ECR_REPO }}
+      - name: Build and push Docker image to ECR
         run: |
-          FULL_IMAGE_URI=$ECR_REGISTRY/$ECR_REPO:$IMAGE_TAG
-          echo "Building Docker image: $FULL_IMAGE_URI"
-          docker build -t $FULL_IMAGE_URI .
-          echo "Pushing Docker image to ECR: $FULL_IMAGE_URI"
-          docker push $FULL_IMAGE_URI
-          echo "IMAGE_URI=$FULL_IMAGE_URI" >> $GITHUB_ENV
+          IMAGE_URI=${{ secrets.ECR_IMAGE_URI }}:latest
+          echo "Building image: $IMAGE_URI"
+          docker build -t $IMAGE_URI .
+          echo "Pushing image: $IMAGE_URI"
+          docker push $IMAGE_URI
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
   # -------------------------------
   # Continuous Deployment (CD)
   # -------------------------------
   Continuous-Deployment:
     needs: Continuous-Integration
-    runs-on: self-hosted  # Your EC2 runner
+    runs-on: self-hosted   # EC2 GitHub runner
 
     steps:
       - name: Checkout code
@@ -63,20 +55,21 @@ jobs:
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
       - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v1
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_DEFAULT_REGION }} \
+          | docker login --username AWS --password-stdin 019809346833.dkr.ecr.ap-south-1.amazonaws.com
 
       - name: Pull and run Docker container
-        env:
-          IMAGE_URI: ${{ env.IMAGE_URI }}
         run: |
-          echo "Pulling Docker image: $IMAGE_URI"
+          IMAGE_URI=${{ secrets.ECR_IMAGE_URI }}:latest
+          echo "Pulling image: $IMAGE_URI"
           docker pull $IMAGE_URI
 
-          echo "Stopping old container if it exists..."
+          echo "Stopping old container..."
           docker stop myapp || true
           docker rm myapp || true
 
-          echo "Running new container..."
+          echo "Starting new container..."
           docker run -d \
             --name myapp \
             -p 5000:5000 \
@@ -86,4 +79,4 @@ jobs:
             -e MONGODB_URL="${{ secrets.MONGODB_URL }}" \
             $IMAGE_URI
 
-          echo "Deployment completed!"
+          echo "🚀 Deployment completed successfully!"
