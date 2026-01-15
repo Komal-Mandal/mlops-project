@@ -1,4 +1,4 @@
-name: Deploy Docker Image to EC2 via ECR
+name: Deploy Application Docker Image to EC2 instance
 
 on:
   push:
@@ -16,73 +16,54 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-          | docker login --username AWS --password-stdin \
-            019809346833.dkr.ecr.ap-south-1.amazonaws.com
-
-      # 🔎 Debug check (keep until pipeline passes once)
-      - name: Verify ECR_URL secret
-        run: |
-          if [ -z "${{ secrets.ECR_URL }}" ]; then
-            echo "❌ ECR_URL is EMPTY"
-            exit 1
-          else
-            echo "✅ ECR_URL is SET"
-          fi
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push Docker image
         run: |
           IMAGE_URI=${{ secrets.ECR_URL }}:latest
-          echo "Building image: $IMAGE_URI"
           docker build -t $IMAGE_URI .
           docker push $IMAGE_URI
+          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
   # -------------------------------
   # Continuous Deployment (CD)
   # -------------------------------
   Continuous-Deployment:
     needs: Continuous-Integration
-    runs-on: self-hosted   # EC2 runner
+    runs-on: self-hosted
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v1
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
           aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
-        run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
-          | docker login --username AWS --password-stdin \
-            019809346833.dkr.ecr.ap-south-1.amazonaws.com
+        uses: aws-actions/amazon-ecr-login@v2
 
       - name: Pull and run Docker container
         run: |
           IMAGE_URI=${{ secrets.ECR_URL }}:latest
-          echo "Pulling image: $IMAGE_URI"
+
           docker pull $IMAGE_URI
 
-          echo "Stopping old container..."
-          docker stop vehicleproj || true
-          docker rm vehicleproj || true
+          docker stop myapp || true
+          docker rm myapp || true
 
-          echo "Starting new container..."
           docker run -d \
-            --name vehicleproj \
+            --name myapp \
             -p 5000:5000 \
+            -e MONGODB_URL="${{ secrets.MONGODB_URL }}" \
             $IMAGE_URI
-
-          echo "🚀 Deployment completed successfully!"
