@@ -1,17 +1,17 @@
-import boto3
-from src.configuration.aws_connection import S3Client
-from io import StringIO
-from typing import Union,List
-import os,sys
-from src.logger import logging
+import boto3  # AWS SDK for Python (used to talk to S3)
+from src.configuration.aws_connection import S3Client # Manages AWS credentials & region
+from io import StringIO # Used to convert text data into a file-like object
+from typing import Union,List # For type hinting (better readability & IDE support)
+import os,sys # os → file operations (delete local files), sys → system-level exception handling
+from src.logger import logging # Custom logging (important in production instead of print())
 from mypy_boto3_s3.service_resource import Bucket
-from src.exception import MyException
-from botocore.exceptions import ClientError
-from pandas import DataFrame,read_csv
-import pickle
+from src.exception import MyException # Custom exception class
+from botocore.exceptions import ClientError # AWS-specific exception handling
+from pandas import DataFrame,read_csv # Data handling using Pandas
+import pickle # Used to serialize / deserialize ML models
 
 
-class SimpleStorageService:
+class SimpleStorageService: # A service class that manages all S3-related tasks
     """
     A class for interacting with AWS S3 storage, providing methods for file management, 
     data uploads, and data retrieval in S3 buckets.
