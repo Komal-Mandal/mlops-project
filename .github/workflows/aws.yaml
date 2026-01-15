@@ -1,69 +1,38 @@
-name: CI-CD Docker Deploy to EC2
+deploy:
+  needs: build
+  runs-on: self-hosted
 
-on:
-  push:
-    branches:
-      - main
+  steps:
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v2
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-jobs:
-  # -----------------------
-  # CI: Build & Push Image
-  # -----------------------
-  build:
-    runs-on: ubuntu-latest
+    - name: Login to Amazon ECR
+      uses: aws-actions/amazon-ecr-login@v2
 
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+    - name: Stop & remove old container (safe)
+      run: |
+        docker rm -f vehicleproj || true
+        docker ps -aq | xargs -r docker rm -f
 
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+    - name: Free port 5000 (safe)
+      run: |
+        sudo fuser -k 5000/tcp || true
 
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
+    - name: Pull image
+      run: |
+        docker pull ${{ secrets.ECR_URL }}:latest
 
-      - name: Build and Push Docker Image
-        run: |
-          IMAGE_URI=${{ secrets.ECR_URL }}:latest
-          docker build -t $IMAGE_URI .
-          docker push $IMAGE_URI
-
-  # -----------------------
-  # CD: Deploy on EC2
-  # -----------------------
-  deploy:
-    needs: build
-    runs-on: self-hosted
-
-    steps:
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
-
-      - name: Login to Amazon ECR
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Stop old container
-        run: |
-          docker rm -f vehicleproj || true
-
-      - name: Pull latest image
-        run: |
-          docker pull ${{ secrets.ECR_URL }}:latest
-
-      - name: Run container
-        run: |
-          docker run -d \
-            --name vehicleproj \
-            -p 5000:5000 \
-            -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
-            -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
-            -e AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }} \
-            ${{ secrets.ECR_URL }}:latest
+    - name: Run container (safe)
+      run: |
+        docker run -d \
+          --restart unless-stopped \
+          --name vehicleproj \
+          -p 5000:5000 \
+          -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
+          -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
+          -e AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }} \
+          ${{ secrets.ECR_URL }}:latest
