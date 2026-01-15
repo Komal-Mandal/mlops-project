@@ -1,4 +1,4 @@
-name: CI-CD Pipeline (Docker → ECR → EC2)
+name: CI-CD Docker Deploy to EC2
 
 on:
   push:
@@ -6,10 +6,10 @@ on:
       - main
 
 jobs:
-  # =========================
+  # -----------------------
   # CI: Build & Push Image
-  # =========================
-  build-and-push:
+  # -----------------------
+  build:
     runs-on: ubuntu-latest
 
     steps:
@@ -29,22 +29,17 @@ jobs:
       - name: Build and Push Docker Image
         run: |
           IMAGE_URI=${{ secrets.ECR_URL }}:latest
-          echo "Building image: $IMAGE_URI"
           docker build -t $IMAGE_URI .
-          echo "Pushing image: $IMAGE_URI"
           docker push $IMAGE_URI
 
-  # =========================
+  # -----------------------
   # CD: Deploy on EC2
-  # =========================
+  # -----------------------
   deploy:
-    needs: build-and-push
-    runs-on: self-hosted   # your EC2 runner
+    needs: build
+    runs-on: self-hosted
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
-
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
@@ -57,23 +52,18 @@ jobs:
 
       - name: Stop old container
         run: |
-          docker stop vehicleproj || true
-          docker rm vehicleproj || true
+          docker rm -f vehicleproj || true
 
-      - name: Pull & Run Docker Container
+      - name: Pull latest image
         run: |
-          IMAGE_URI=${{ secrets.ECR_URL }}:latest
+          docker pull ${{ secrets.ECR_URL }}:latest
 
-          echo "Pulling image: $IMAGE_URI"
-          docker pull $IMAGE_URI
-
-          echo "Starting new container..."
+      - name: Run container
+        run: |
           docker run -d \
             --name vehicleproj \
             -p 5000:5000 \
-            -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
-            -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-            -e AWS_DEFAULT_REGION="${{ secrets.AWS_DEFAULT_REGION }}" \
-            $IMAGE_URI
-
-          echo "🚀 Deployment successful"
+            -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
+            -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
+            -e AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }} \
+            ${{ secrets.ECR_URL }}:latest
