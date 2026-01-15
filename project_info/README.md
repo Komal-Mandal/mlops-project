@@ -9,7 +9,7 @@ It helps in building, training, evaluating, and deploying ML models in an organi
 The main goal of this structure is to keep code clean, reusable, and easy to debug.
 
 ## 📂 Project Structure
-
+```
 project-root/
 │
 ├── notebook/                     # Jupyter notebooks (EDA & experiments)
@@ -68,7 +68,7 @@ project-root/
 ├── .dockerignore                 # Docker ignore file
 ├── setup.py                      # Package setup
 └── pyproject.toml                # Build configuration
-
+```
 
 ### 🔹 src/
 
