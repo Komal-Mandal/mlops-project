@@ -25,14 +25,14 @@ jobs:
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_DEFAULT_REGION }} \
-          | docker login --username AWS --password-stdin 019809346833.dkr.ecr.ap-south-1.amazonaws.com
+          | docker login --username AWS --password-stdin \
+            019809346833.dkr.ecr.ap-south-1.amazonaws.com
 
       - name: Build and push Docker image to ECR
         run: |
-          IMAGE_URI=${{ secrets.ECR_IMAGE_URI }}:latest
+          IMAGE_URI=${{ secrets.ECR_URL }}:latest
           echo "Building image: $IMAGE_URI"
           docker build -t $IMAGE_URI .
-          echo "Pushing image: $IMAGE_URI"
           docker push $IMAGE_URI
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
@@ -57,7 +57,8 @@ jobs:
       - name: Login to Amazon ECR
         run: |
           aws ecr get-login-password --region ${{ secrets.AWS_DEFAULT_REGION }} \
-          | docker login --username AWS --password-stdin 019809346833.dkr.ecr.ap-south-1.amazonaws.com
+          | docker login --username AWS --password-stdin \
+            019809346833.dkr.ecr.ap-south-1.amazonaws.com
 
       - name: Pull and run Docker container
         run: |
