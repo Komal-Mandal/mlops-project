@@ -1,14 +1,15 @@
-name: Deploy Application Docker Image to EC2 instance
+name: CI-CD Pipeline (Docker → ECR → EC2)
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  # -------------------------------
-  # Continuous Integration (CI)
-  # -------------------------------
-  Continuous-Integration:
+  # =========================
+  # CI: Build & Push to ECR
+  # =========================
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -16,54 +17,61 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Build and push Docker image
+      - name: Build and Push Docker Image
         run: |
           IMAGE_URI=${{ secrets.ECR_URL }}:latest
+          echo "Building image: $IMAGE_URI"
           docker build -t $IMAGE_URI .
+          echo "Pushing image: $IMAGE_URI"
           docker push $IMAGE_URI
-          echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
 
-  # -------------------------------
-  # Continuous Deployment (CD)
-  # -------------------------------
-  Continuous-Deployment:
-    needs: Continuous-Integration
-    runs-on: self-hosted
+  # =========================
+  # CD: Deploy on EC2
+  # =========================
+  deploy:
+    needs: build-and-push
+    runs-on: self-hosted   # your EC2 runner
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@v2
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
-          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
-      - name: Pull and run Docker container
+      - name: Pull & Run Docker Container
         run: |
           IMAGE_URI=${{ secrets.ECR_URL }}:latest
-
+          echo "Pulling image: $IMAGE_URI"
           docker pull $IMAGE_URI
 
-          docker stop myapp || true
-          docker rm myapp || true
+          echo "Stopping old container..."
+          docker stop vehicleproj || true
+          docker rm vehicleproj || true
 
+          echo "Starting new container..."
           docker run -d \
-            --name myapp \
+            --name vehicleproj \
             -p 5000:5000 \
-            -e MONGODB_URL="${{ secrets.MONGODB_URL }}" \
+            -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
+            -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
+            -e AWS_DEFAULT_REGION="${{ secrets.AWS_DEFAULT_REGION }}" \
             $IMAGE_URI
+
+          echo "🚀 Deployment successful"
