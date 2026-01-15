@@ -1,13 +1,13 @@
 name: CI/CD Pipeline
 
-# Trigger on push to main branch
+# Trigger workflow on push to main branch
 on:
   push:
     branches:
       - main
 
 jobs:
-  build:
+  build-and-push:
     runs-on: ubuntu-latest
 
     steps:
@@ -38,7 +38,7 @@ jobs:
           docker push ${{ secrets.ECR_URL }}:latest
 
   deploy:
-    needs: build
+    needs: build-and-push
     runs-on: self-hosted
 
     steps:
@@ -64,9 +64,10 @@ jobs:
 
       - name: Pull latest Docker image
         run: |
+          echo "Pulling image ${{ secrets.ECR_URL }}:latest"
           docker pull ${{ secrets.ECR_URL }}:latest
 
-      - name: Run container
+      - name: Run new container
         run: |
           echo "Starting new container..."
           docker run -d \
