@@ -1,4 +1,4 @@
-name: Deploy Application Docker Image to EC2 instance
+name: Deploy Docker Image to EC2 via ECR
 
 on:
   push:
@@ -18,17 +18,17 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_DEFAULT_REGION }} \
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
           | docker login --username AWS --password-stdin \
             019809346833.dkr.ecr.ap-south-1.amazonaws.com
 
-      # 🔴 DEBUG STEP (DO NOT REMOVE UNTIL IT PASSES ONCE)
+      # 🔎 Debug check (keep until pipeline passes once)
       - name: Verify ECR_URL secret
         run: |
           if [ -z "${{ secrets.ECR_URL }}" ]; then
@@ -38,7 +38,7 @@ jobs:
             echo "✅ ECR_URL is SET"
           fi
 
-      - name: Build and push Docker image to ECR
+      - name: Build and push Docker image
         run: |
           IMAGE_URI=${{ secrets.ECR_URL }}:latest
           echo "Building image: $IMAGE_URI"
@@ -50,7 +50,7 @@ jobs:
   # -------------------------------
   Continuous-Deployment:
     needs: Continuous-Integration
-    runs-on: self-hosted   # EC2 GitHub runner
+    runs-on: self-hosted   # EC2 runner
 
     steps:
       - name: Checkout code
@@ -59,13 +59,13 @@ jobs:
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v1
         with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Login to Amazon ECR
         run: |
-          aws ecr get-login-password --region ${{ secrets.AWS_DEFAULT_REGION }} \
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} \
           | docker login --username AWS --password-stdin \
             019809346833.dkr.ecr.ap-south-1.amazonaws.com
 
@@ -83,10 +83,6 @@ jobs:
           docker run -d \
             --name vehicleproj \
             -p 5000:5000 \
-            -e AWS_ACCESS_KEY_ID="${{ secrets.AWS_ACCESS_KEY_ID }}" \
-            -e AWS_SECRET_ACCESS_KEY="${{ secrets.AWS_SECRET_ACCESS_KEY }}" \
-            -e AWS_DEFAULT_REGION="${{ secrets.AWS_DEFAULT_REGION }}" \
-            -e MONGODB_URL="${{ secrets.MONGODB_URL }}" \
             $IMAGE_URI
 
           echo "🚀 Deployment completed successfully!"
