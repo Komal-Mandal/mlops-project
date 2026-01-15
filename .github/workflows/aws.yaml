@@ -7,7 +7,7 @@ on:
 
 jobs:
   # =========================
-  # CI: Build & Push to ECR
+  # CI: Build & Push Image
   # =========================
   build-and-push:
     runs-on: ubuntu-latest
@@ -55,15 +55,17 @@ jobs:
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Stop old container
+        run: |
+          docker stop vehicleproj || true
+          docker rm vehicleproj || true
+
       - name: Pull & Run Docker Container
         run: |
           IMAGE_URI=${{ secrets.ECR_URL }}:latest
+
           echo "Pulling image: $IMAGE_URI"
           docker pull $IMAGE_URI
-
-          echo "Stopping old container..."
-          docker stop vehicleproj || true
-          docker rm vehicleproj || true
 
           echo "Starting new container..."
           docker run -d \
