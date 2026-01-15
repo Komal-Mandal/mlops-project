@@ -61,7 +61,7 @@ jobs:
 
       - name: Pull and run Docker container
         run: |
-          IMAGE_URI=${{ secrets.ECR_IMAGE_URI }}:latest
+          IMAGE_URI=${{ secrets.ECR_URL }}:latest
           echo "Pulling image: $IMAGE_URI"
           docker pull $IMAGE_URI
 
