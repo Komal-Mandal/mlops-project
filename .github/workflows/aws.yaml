@@ -54,13 +54,12 @@ jobs:
         with:
           aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
 
-      - name: Stop & remove old container
+      - name: Stop & remove old container and free port
         run: |
+          echo "Stopping old container if exists..."
           docker rm -f vehicleproj || true
           docker ps -aq | xargs -r docker rm -f
-
-      - name: Free port 5000
-        run: |
+          echo "Freeing port 5000..."
           sudo fuser -k 5000/tcp || true
 
       - name: Pull latest Docker image
@@ -69,6 +68,7 @@ jobs:
 
       - name: Run container
         run: |
+          echo "Starting new container..."
           docker run -d \
             --restart unless-stopped \
             --name vehicleproj \
@@ -76,4 +76,4 @@ jobs:
             -e AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }} \
             -e AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }} \
             -e AWS_DEFAULT_REGION=${{ secrets.AWS_DEFAULT_REGION }} \
-            ${{ secrets.ECR_URL }}:latest
+            ${{ secrets.ECR_URL }}:latest || docker logs vehicleproj
